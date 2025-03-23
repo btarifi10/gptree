@@ -9,7 +9,6 @@ def _parse_repo(repo_path):
     structure = {'_children': {}, '_exports': {'constants': [], 'functions': [], 'classes': []}}
 
     for root, dirs, files in os.walk(repo_path):
-
         dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
 
         rel_path = os.path.relpath(root, repo_path)
@@ -52,7 +51,7 @@ def _get_exports(tree):
                 if isinstance(target, ast.Name) and target.id == '__all__':
                     if isinstance(node.value, (ast.List, ast.Tuple)):
                         for elt in node.value.elts:
-                            if isinstance(elt, ast.Str):
+                            if isinstance(elt, ast.Constant):
                                 all_names.append(elt.s)
                     break
 
@@ -66,18 +65,36 @@ def _get_exports(tree):
         elif isinstance(node, ast.FunctionDef):
             if (all_names and node.name in all_names) or (not all_names and not node.name.startswith('_')):
                 try:
-                    sig = f"{node.name}{ast.unparse(node.args)}"
+                    sig = f"{node.name}({ast.unparse(node.args)})"
                 except AttributeError:
-                    sig = node.name
+                    sig = f"{node.name}()"
                 exports['functions'].append(sig)
         elif isinstance(node, ast.ClassDef):
             if (all_names and node.name in all_names) or (not all_names and not node.name.startswith('_')):
+                # Collect class methods
+                methods = []
+                for class_body_node in node.body:
+                    if isinstance(class_body_node, ast.FunctionDef):
+                        method_name = class_body_node.name
+                        if not method_name.startswith('_'):
+                            try:
+                                method_sig = f"{method_name}({ast.unparse(class_body_node.args)})"
+                            except AttributeError:
+                                method_sig = f"{method_name}()"
+                            methods.append(method_sig)
+                
+                # Format class signature
                 try:
                     bases = [ast.unparse(base) for base in node.bases]
-                    class_sig = f"{node.name}({', '.join(bases)})" if bases else node.name
                 except AttributeError:
-                    class_sig = node.name
-                exports['classes'].append(class_sig)
+                    bases = []
+                
+                class_entry = {
+                    'name': node.name,
+                    'bases': bases,
+                    'methods': methods
+                }
+                exports['classes'].append(class_entry)
     return exports
 
 def _get_tree(repo_name, structure):
@@ -86,7 +103,7 @@ def _get_tree(repo_name, structure):
     def recurse(node, prefix, is_last, result):
         constants = sorted(node['_exports']['constants'], key=lambda x: x.lower())
         functions = sorted(node['_exports']['functions'], key=lambda x: x.lower())
-        classes = sorted(node['_exports']['classes'], key=lambda x: x.lower())
+        classes = sorted(node['_exports']['classes'], key=lambda x: x['name'].lower())
         children = sorted(node['_children'].items(), key=lambda x: x[0].lower())
         
         all_items = []
@@ -105,13 +122,24 @@ def _get_tree(repo_name, structure):
             elif item[0] == 'function':
                 line += f"method {item[1]}"
             elif item[0] == 'class':
-                line += f"class {item[1]}"
+                class_info = item[1]
+                bases_str = f"({', '.join(class_info['bases'])})" if class_info['bases'] else ""
+                line += f"class {class_info['name']}{bases_str}"
             else:
                 line += f"{item[1][0]}"
             
             result.append(line)
             
-            if item[0] == 'module':
+            if item[0] == 'class':
+                # Add class methods
+                class_info = item[1]
+                method_prefix = prefix + ('    ' if is_last_item else '│   ') + '    '
+                for mi, method in enumerate(class_info['methods']):
+                    is_last_method = mi == len(class_info['methods']) - 1
+                    method_connector = '└── ' if is_last_method else '├── '
+                    method_line = f"{method_prefix}{method_connector}method {method}"
+                    result.append(method_line)
+            elif item[0] == 'module':
                 extension = '    ' if is_last_item else '│   '
                 new_prefix = prefix + extension
                 recurse(item[1][1], new_prefix, is_last_item, result)
@@ -119,11 +147,9 @@ def _get_tree(repo_name, structure):
     recurse(structure, '', True, lines)
     return lines
 
-
 def python_repo_tree(repo_path, output_file):
     repo_name, structure = _parse_repo(repo_path)
     tree = _get_tree(repo_name, structure)
 
-        # Write to file
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write('\n'.join(tree))
