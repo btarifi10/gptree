@@ -69,13 +69,13 @@ gptree
     │   │   ├── const DEFAULT_EXCL_DIRS
     │   │   ├── const DEFAULT_EXCL_EXTS
     │   │   ├── method cli
-    │   │   ├── method flattenrepo_path, output, exclude_dirs, exclude_exts, use_gitignore
-    │   │   └── method python_treerepo_path, output
+    │   │   ├── method flatten(repo_path, output, exclude_dirs, exclude_exts, use_gitignore)
+    │   │   └── method python_tree(repo_path, output)
     │   ├── flattener
-    │   │   └── method flatten_reporepo_path, output_file, excluded_dirs, excluded_extensions, use_gitignore=False
+    │   │   └── method flatten_repo(repo_path, output_file, excluded_dirs, excluded_extensions) use_gitignore=False
     │   └── tree
     │       ├── const EXCLUDED_DIRS
-    │       └── method python_repo_treerepo_path, output_file
+    │       └── method python_repo_tree(repo_path, output_file)
     └── setup
 ```
 
