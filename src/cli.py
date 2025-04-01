@@ -45,16 +45,16 @@ def flatten(repo_path, output, exclude_dirs, exclude_exts, use_gitignore):
 
 @click.command()
 @click.argument('repo_path', type=click.Path(exists=True, file_okay=False))
-@click.option('-o', '--output', default='flattened_repo.txt',
-              help='Output file name')
-def python_tree(repo_path, output):
+@click.option('-o', '--output', default='flattened_repo.txt', help='Output file name')
+@click.option('--include-docstrings', is_flag=True, help='Include docstrings in the tree')
+def python_tree(repo_path, output, include_docstrings):
     """Generate Python project tree structure"""
     
     # check that the output file folders exist
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
-    python_repo_tree(repo_path=repo_path, output_file=output)
+    python_repo_tree(repo_path=repo_path, output_file=output, include_docstrings=include_docstrings)
 
     click.echo(f"✅ Python project tree generated to {output}")
 

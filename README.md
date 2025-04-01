@@ -1,4 +1,4 @@
-# 🚀 Flat Repo
+# 🚀 GPTree
 
 **Transform code repositories into LLM-friendly context with style!**  
 📦 Flatten directories • 🌳 Generate structure trees • 🧠 AI-ready formatting
@@ -38,7 +38,7 @@ gptree flatten ./your-project \
 ### 🌿 Generate Project Tree
 
 ```
-gptree python-tree ./your-project -o tree.txt
+gptree python-tree ./your-project -o tree.txt --include-docstrings
 ```
 
 ## 🎯 Example Outputs
